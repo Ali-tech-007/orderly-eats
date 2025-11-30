@@ -46,3 +46,40 @@ export interface Order {
   discount?: number;
   discountType?: 'percentage' | 'fixed';
 }
+
+export type PaymentMethod = 'cash' | 'card';
+
+export interface TipOption {
+  label: string;
+  percentage: number;
+}
+
+export interface SplitBillPerson {
+  id: string;
+  name: string;
+  amount: number;
+  paid: boolean;
+  paymentMethod?: PaymentMethod;
+}
+
+export interface PaymentData {
+  method: PaymentMethod;
+  subtotal: number;
+  discount: number;
+  tax: number;
+  tip: number;
+  total: number;
+  splitBetween?: SplitBillPerson[];
+  cashTendered?: number;
+  change?: number;
+  cardLastFour?: string;
+}
+
+export interface Receipt {
+  id: string;
+  orderItems: OrderItem[];
+  payment: PaymentData;
+  tableName?: string;
+  timestamp: Date;
+  orderNumber: string;
+}
