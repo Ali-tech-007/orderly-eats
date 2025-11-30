@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback } from "react";
 import { Helmet } from "react-helmet-async";
 import { toast } from "sonner";
-import type { MenuItem, OrderItem, Table, TableStatus } from "@/types/pos";
+import type { MenuItem, OrderItem, Table, TableStatus, PaymentData, Receipt } from "@/types/pos";
 import { categories, menuItems } from "@/data/menuData";
 import { tables as initialTables } from "@/data/tableData";
 import { POSHeader } from "@/components/pos/POSHeader";
@@ -12,6 +12,9 @@ import { SearchBar } from "@/components/pos/SearchBar";
 import { TableMap } from "@/components/pos/TableMap";
 import { ModifierDialog } from "@/components/pos/ModifierDialog";
 import { DiscountDialog } from "@/components/pos/DiscountDialog";
+import { PaymentDialog } from "@/components/pos/PaymentDialog";
+import { SplitBillDialog } from "@/components/pos/SplitBillDialog";
+import { ReceiptDialog } from "@/components/pos/ReceiptDialog";
 import { modifierPresets } from "@/data/tableData";
 
 type ViewMode = 'menu' | 'tables';
@@ -35,6 +38,10 @@ const Index = () => {
   // Dialog State
   const [modifierItem, setModifierItem] = useState<MenuItem | null>(null);
   const [showDiscountDialog, setShowDiscountDialog] = useState(false);
+  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [showSplitBillDialog, setShowSplitBillDialog] = useState(false);
+  const [currentReceipt, setCurrentReceipt] = useState<Receipt | null>(null);
+  const [paymentTip, setPaymentTip] = useState(0);
 
   // Favorites & Recently Added
   const [favorites, setFavorites] = useState<string[]>([]);
@@ -138,29 +145,47 @@ const Index = () => {
   };
 
   const handleCheckout = () => {
-    const subtotal = orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-    const discountAmount = discount
-      ? discount.type === 'percentage'
-        ? (subtotal * discount.amount) / 100
-        : discount.amount
-      : 0;
-    const total = (subtotal - discountAmount) * 1.1;
-    
-    toast.success(`Order placed! Total: $${total.toFixed(2)}`, {
-      duration: 3000,
-      position: "bottom-center",
-    });
+    setShowPaymentDialog(true);
+  };
+
+  const handlePaymentComplete = (paymentData: PaymentData) => {
+    // Generate receipt
+    const receipt: Receipt = {
+      id: `RCP-${Date.now()}`,
+      orderItems: [...orderItems],
+      payment: paymentData,
+      tableName: selectedTableName,
+      timestamp: new Date(),
+      orderNumber: `${Date.now().toString().slice(-6)}`,
+    };
+
+    setCurrentReceipt(receipt);
+    setShowPaymentDialog(false);
+    setShowSplitBillDialog(false);
+
+    // Clear order
     setOrderItems([]);
     setDiscount(undefined);
     setOrderHistory([]);
+    setPaymentTip(0);
     setIsCartOpen(false);
-    
+
     // Update table status if selected
     if (selectedTable) {
       setTables((prev) =>
         prev.map((t) => (t.id === selectedTable ? { ...t, status: 'dirty' as TableStatus } : t))
       );
     }
+
+    toast.success(`Payment complete! Total: $${paymentData.total.toFixed(2)}`, {
+      duration: 3000,
+      position: "bottom-center",
+    });
+  };
+
+  const handleOpenSplitBill = () => {
+    setShowPaymentDialog(false);
+    setShowSplitBillDialog(true);
   };
 
   const handleSendToKitchen = () => {
@@ -172,10 +197,7 @@ const Index = () => {
   };
 
   const handleSplitBill = () => {
-    toast.info("Split bill feature coming soon!", {
-      duration: 2000,
-      position: "bottom-center",
-    });
+    setShowSplitBillDialog(true);
   };
 
   const handleApplyDiscount = () => {
@@ -220,6 +242,12 @@ const Index = () => {
   const selectedTableName = selectedTableData ? `Table ${selectedTableData.number}` : undefined;
 
   const subtotal = orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const discountAmount = discount
+    ? discount.type === 'percentage'
+      ? (subtotal * discount.amount) / 100
+      : discount.amount
+    : 0;
+  const tax = (subtotal - discountAmount) * 0.1;
 
   return (
     <>
@@ -348,6 +376,42 @@ const Index = () => {
           subtotal={subtotal}
           onApply={handleConfirmDiscount}
           onClose={() => setShowDiscountDialog(false)}
+        />
+      )}
+
+      {/* Payment Dialog */}
+      {showPaymentDialog && (
+        <PaymentDialog
+          items={orderItems}
+          subtotal={subtotal}
+          discount={discountAmount}
+          tax={tax}
+          tableName={selectedTableName}
+          onComplete={handlePaymentComplete}
+          onSplitBill={handleOpenSplitBill}
+          onClose={() => setShowPaymentDialog(false)}
+        />
+      )}
+
+      {/* Split Bill Dialog */}
+      {showSplitBillDialog && (
+        <SplitBillDialog
+          items={orderItems}
+          subtotal={subtotal}
+          discount={discountAmount}
+          tax={tax}
+          tip={paymentTip}
+          tableName={selectedTableName}
+          onComplete={handlePaymentComplete}
+          onClose={() => setShowSplitBillDialog(false)}
+        />
+      )}
+
+      {/* Receipt Dialog */}
+      {currentReceipt && (
+        <ReceiptDialog
+          receipt={currentReceipt}
+          onClose={() => setCurrentReceipt(null)}
         />
       )}
     </>
