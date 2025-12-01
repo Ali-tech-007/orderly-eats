@@ -1,6 +1,8 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
 import type { MenuItem, OrderItem, Table, TableStatus, PaymentData, Receipt } from "@/types/pos";
 import { categories, menuItems } from "@/data/menuData";
 import { tables as initialTables } from "@/data/tableData";
@@ -15,11 +17,18 @@ import { DiscountDialog } from "@/components/pos/DiscountDialog";
 import { PaymentDialog } from "@/components/pos/PaymentDialog";
 import { SplitBillDialog } from "@/components/pos/SplitBillDialog";
 import { ReceiptDialog } from "@/components/pos/ReceiptDialog";
+import { SettingsDialog } from "@/components/pos/SettingsDialog";
 import { modifierPresets } from "@/data/tableData";
+import { useAuth } from "@/contexts/AuthContext";
+import { usePOSSettings } from "@/hooks/usePOSSettings";
 
 type ViewMode = 'menu' | 'tables';
 
 const Index = () => {
+  const navigate = useNavigate();
+  const { user, isLoading: authLoading } = useAuth();
+  const { taxRates, isLoading: settingsLoading } = usePOSSettings();
+
   // View & Navigation State
   const [viewMode, setViewMode] = useState<ViewMode>('menu');
   const [activeCategory, setActiveCategory] = useState("all");
@@ -40,12 +49,20 @@ const Index = () => {
   const [showDiscountDialog, setShowDiscountDialog] = useState(false);
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [showSplitBillDialog, setShowSplitBillDialog] = useState(false);
+  const [showSettingsDialog, setShowSettingsDialog] = useState(false);
   const [currentReceipt, setCurrentReceipt] = useState<Receipt | null>(null);
   const [paymentTip, setPaymentTip] = useState(0);
 
   // Favorites & Recently Added
   const [favorites, setFavorites] = useState<string[]>([]);
   const [recentlyAdded, setRecentlyAdded] = useState<string[]>([]);
+
+  // Auth redirect
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate("/auth");
+    }
+  }, [user, authLoading, navigate]);
 
   // Filtered Items
   const filteredItems = useMemo(() => {
@@ -306,7 +323,16 @@ const Index = () => {
       ? (subtotal * discount.amount) / 100
       : discount.amount
     : 0;
-  const tax = (subtotal - discountAmount) * 0.1;
+  const tax = (subtotal - discountAmount) * taxRates.cash; // Default to cash rate for display
+
+  // Show loading state
+  if (authLoading || settingsLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <>
@@ -325,6 +351,7 @@ const Index = () => {
           viewMode={viewMode}
           onViewModeChange={setViewMode}
           selectedTableName={selectedTableName}
+          onOpenSettings={() => setShowSettingsDialog(true)}
         />
 
         <div className="flex flex-1 overflow-hidden">
@@ -448,6 +475,7 @@ const Index = () => {
           subtotal={subtotal}
           discount={discountAmount}
           tableName={selectedTableName}
+          taxRates={taxRates}
           onComplete={handlePaymentComplete}
           onSplitBill={handleOpenSplitBill}
           onClose={() => setShowPaymentDialog(false)}
@@ -472,6 +500,13 @@ const Index = () => {
         <ReceiptDialog
           receipt={currentReceipt}
           onClose={() => setCurrentReceipt(null)}
+        />
+      )}
+
+      {/* Settings Dialog */}
+      {showSettingsDialog && (
+        <SettingsDialog
+          onClose={() => setShowSettingsDialog(false)}
         />
       )}
     </>

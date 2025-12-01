@@ -10,6 +10,7 @@ interface PaymentDialogProps {
   subtotal: number;
   discount: number;
   tableName?: string;
+  taxRates: { cash: number; card: number };
   onComplete: (paymentData: PaymentData) => void;
   onSplitBill: () => void;
   onClose: () => void;
@@ -24,17 +25,12 @@ const tipOptions: TipOption[] = [
 
 const quickCashAmounts = [20, 50, 100];
 
-// Tax rates: 15% for cash, 5% for card
-const TAX_RATES = {
-  cash: 0.15,
-  card: 0.05,
-};
-
 export function PaymentDialog({
   items,
   subtotal,
   discount,
   tableName,
+  taxRates,
   onComplete,
   onSplitBill,
   onClose,
@@ -46,8 +42,8 @@ export function PaymentDialog({
   const [cardLastFour, setCardLastFour] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // Calculate tax based on payment method
-  const taxRate = paymentMethod ? TAX_RATES[paymentMethod] : TAX_RATES.cash;
+  // Calculate tax based on payment method using passed-in rates
+  const taxRate = paymentMethod ? taxRates[paymentMethod] : taxRates.cash;
   const taxableAmount = subtotal - discount;
   const tax = taxableAmount * taxRate;
 
@@ -152,13 +148,15 @@ export function PaymentDialog({
               </div>
             )}
             <div className="flex justify-between text-sm text-muted-foreground">
-              <span>Tax ({paymentMethod === 'card' ? '5%' : '15%'})</span>
+              <span>Tax ({paymentMethod ? `${(taxRates[paymentMethod] * 100).toFixed(0)}%` : `${(taxRates.cash * 100).toFixed(0)}%`})</span>
               <span>${tax.toFixed(2)}</span>
             </div>
             {paymentMethod && (
               <div className="flex justify-between text-xs text-blue-400">
                 <span>
-                  {paymentMethod === 'card' ? '💳 Card discount: 10% lower tax' : '💵 Cash payment'}
+                  {paymentMethod === 'card' 
+                    ? `💳 Card: ${(taxRates.card * 100).toFixed(0)}% tax` 
+                    : `💵 Cash: ${(taxRates.cash * 100).toFixed(0)}% tax`}
                 </span>
               </div>
             )}

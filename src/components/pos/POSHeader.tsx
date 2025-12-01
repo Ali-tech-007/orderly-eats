@@ -1,6 +1,14 @@
-import { Clock, User, ShoppingCart, LayoutGrid, UtensilsCrossed } from "lucide-react";
+import { Clock, User, ShoppingCart, LayoutGrid, UtensilsCrossed, LogOut, Settings, ChevronDown } from "lucide-react";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 type ViewMode = 'menu' | 'tables';
 
@@ -10,7 +18,15 @@ interface POSHeaderProps {
   viewMode: ViewMode;
   onViewModeChange: (mode: ViewMode) => void;
   selectedTableName?: string;
+  onOpenSettings?: () => void;
 }
+
+const roleColors: Record<string, string> = {
+  admin: "text-red-400",
+  manager: "text-blue-400",
+  server: "text-green-400",
+  kitchen: "text-orange-400",
+};
 
 export function POSHeader({
   orderCount,
@@ -18,13 +34,22 @@ export function POSHeader({
   viewMode,
   onViewModeChange,
   selectedTableName,
+  onOpenSettings,
 }: POSHeaderProps) {
+  const { profile, role, signOut, user } = useAuth();
   const [time, setTime] = useState(new Date());
 
   useEffect(() => {
     const interval = setInterval(() => setTime(new Date()), 1000);
     return () => clearInterval(interval);
   }, []);
+
+  const handleSignOut = async () => {
+    await signOut();
+    window.location.href = "/auth";
+  };
+
+  const displayName = profile?.full_name || user?.email?.split("@")[0] || "Staff";
 
   return (
     <header className="flex items-center justify-between p-3 sm:p-4 border-b border-border bg-card">
@@ -76,10 +101,34 @@ export function POSHeader({
           </span>
         </div>
 
-        <div className="hidden md:flex items-center gap-2 px-3 py-2 bg-secondary rounded-lg">
-          <User className="w-4 h-4 text-muted-foreground" />
-          <span className="text-sm font-medium">Server 01</span>
-        </div>
+        {/* User Menu */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="hidden md:flex items-center gap-2 px-3 py-2 bg-secondary rounded-lg hover:bg-secondary/80 transition-colors">
+              <User className="w-4 h-4 text-muted-foreground" />
+              <div className="text-left">
+                <span className="text-sm font-medium block">{displayName}</span>
+                {role && (
+                  <span className={cn("text-xs capitalize", roleColors[role] || "text-muted-foreground")}>
+                    {role}
+                  </span>
+                )}
+              </div>
+              <ChevronDown className="w-4 h-4 text-muted-foreground" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuItem onClick={onOpenSettings} className="cursor-pointer">
+              <Settings className="w-4 h-4 mr-2" />
+              Settings
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer text-destructive focus:text-destructive">
+              <LogOut className="w-4 h-4 mr-2" />
+              Sign Out
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
 
         <button
           onClick={onOpenCart}
