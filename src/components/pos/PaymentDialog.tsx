@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { X, CreditCard, Banknote, Calculator, Users, Check } from "lucide-react";
+import { X, CreditCard, Banknote, Calculator, Users, Check, Receipt } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,7 +9,6 @@ interface PaymentDialogProps {
   items: OrderItem[];
   subtotal: number;
   discount: number;
-  tax: number;
   tableName?: string;
   onComplete: (paymentData: PaymentData) => void;
   onSplitBill: () => void;
@@ -25,11 +24,16 @@ const tipOptions: TipOption[] = [
 
 const quickCashAmounts = [20, 50, 100];
 
+// Tax rates: 15% for cash, 5% for card
+const TAX_RATES = {
+  cash: 0.15,
+  card: 0.05,
+};
+
 export function PaymentDialog({
   items,
   subtotal,
   discount,
-  tax,
   tableName,
   onComplete,
   onSplitBill,
@@ -41,6 +45,11 @@ export function PaymentDialog({
   const [cashTendered, setCashTendered] = useState("");
   const [cardLastFour, setCardLastFour] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
+
+  // Calculate tax based on payment method
+  const taxRate = paymentMethod ? TAX_RATES[paymentMethod] : TAX_RATES.cash;
+  const taxableAmount = subtotal - discount;
+  const tax = taxableAmount * taxRate;
 
   const tipAmount = useMemo(() => {
     if (customTip) return parseFloat(customTip) || 0;
@@ -143,9 +152,16 @@ export function PaymentDialog({
               </div>
             )}
             <div className="flex justify-between text-sm text-muted-foreground">
-              <span>Tax (10%)</span>
+              <span>Tax ({paymentMethod === 'card' ? '5%' : '15%'})</span>
               <span>${tax.toFixed(2)}</span>
             </div>
+            {paymentMethod && (
+              <div className="flex justify-between text-xs text-blue-400">
+                <span>
+                  {paymentMethod === 'card' ? '💳 Card discount: 10% lower tax' : '💵 Cash payment'}
+                </span>
+              </div>
+            )}
             {tipAmount > 0 && (
               <div className="flex justify-between text-sm text-primary">
                 <span>Tip</span>

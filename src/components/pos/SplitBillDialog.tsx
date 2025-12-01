@@ -9,7 +9,6 @@ interface SplitBillDialogProps {
   items: OrderItem[];
   subtotal: number;
   discount: number;
-  tax: number;
   tip: number;
   tableName?: string;
   onComplete: (paymentData: PaymentData) => void;
@@ -18,11 +17,13 @@ interface SplitBillDialogProps {
 
 type SplitType = "equal" | "custom" | "byItem";
 
+// Tax rates: 15% for cash, 5% for card - averaged for split bills
+const TAX_RATE_AVERAGE = 0.10; // 10% average when splitting
+
 export function SplitBillDialog({
   items,
   subtotal,
   discount,
-  tax,
   tip,
   tableName,
   onComplete,
@@ -36,6 +37,8 @@ export function SplitBillDialog({
   ]);
   const [isProcessing, setIsProcessing] = useState(false);
 
+  // Calculate tax based on average rate for split bills
+  const tax = (subtotal - discount) * TAX_RATE_AVERAGE;
   const grandTotal = subtotal - discount + tax + tip;
 
   const equalShare = useMemo(() => {
