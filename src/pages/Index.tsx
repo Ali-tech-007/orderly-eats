@@ -237,6 +237,65 @@ const Index = () => {
     );
   };
 
+  const handleUpdateTablePosition = (tableId: string, position: { x: number; y: number }) => {
+    setTables((prev) =>
+      prev.map((t) => (t.id === tableId ? { ...t, position } : t))
+    );
+  };
+
+  const handleMergeTables = (tableIds: string[]) => {
+    if (tableIds.length < 2) return;
+    
+    const [primaryId, ...otherIds] = tableIds;
+    const primaryTable = tables.find(t => t.id === primaryId);
+    const otherTables = tables.filter(t => otherIds.includes(t.id));
+    
+    if (!primaryTable) return;
+    
+    const mergedSeats = primaryTable.seats + otherTables.reduce((sum, t) => sum + t.seats, 0);
+    
+    setTables((prev) =>
+      prev.map((t) => {
+        if (t.id === primaryId) {
+          return { ...t, seats: mergedSeats, mergedWith: otherIds };
+        }
+        if (otherIds.includes(t.id)) {
+          return { ...t, parentTableId: primaryId, isMerged: true };
+        }
+        return t;
+      })
+    );
+    
+    toast.success(`Merged ${tableIds.length} tables into Table ${primaryTable.number}`, {
+      duration: 2000,
+      position: "bottom-center",
+    });
+  };
+
+  const handleUnmergeTables = (tableId: string) => {
+    const table = tables.find(t => t.id === tableId);
+    if (!table?.mergedWith) return;
+    
+    const originalSeats = initialTables.find(t => t.id === tableId)?.seats || table.seats;
+    
+    setTables((prev) =>
+      prev.map((t) => {
+        if (t.id === tableId) {
+          return { ...t, seats: originalSeats, mergedWith: undefined };
+        }
+        if (table.mergedWith?.includes(t.id)) {
+          return { ...t, parentTableId: undefined, isMerged: false };
+        }
+        return t;
+      })
+    );
+    
+    toast.success("Tables unmerged", {
+      duration: 2000,
+      position: "bottom-center",
+    });
+  };
+
   const orderCount = orderItems.reduce((sum, item) => sum + item.quantity, 0);
   const selectedTableData = tables.find((t) => t.id === selectedTable);
   const selectedTableName = selectedTableData ? `Table ${selectedTableData.number}` : undefined;
@@ -309,6 +368,9 @@ const Index = () => {
                 selectedTable={selectedTable}
                 onSelectTable={handleSelectTable}
                 onUpdateStatus={handleUpdateTableStatus}
+                onUpdatePosition={handleUpdateTablePosition}
+                onMergeTables={handleMergeTables}
+                onUnmergeTables={handleUnmergeTables}
               />
             )}
           </main>
@@ -385,7 +447,6 @@ const Index = () => {
           items={orderItems}
           subtotal={subtotal}
           discount={discountAmount}
-          tax={tax}
           tableName={selectedTableName}
           onComplete={handlePaymentComplete}
           onSplitBill={handleOpenSplitBill}
@@ -399,7 +460,6 @@ const Index = () => {
           items={orderItems}
           subtotal={subtotal}
           discount={discountAmount}
-          tax={tax}
           tip={paymentTip}
           tableName={selectedTableName}
           onComplete={handlePaymentComplete}

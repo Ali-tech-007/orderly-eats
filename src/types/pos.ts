@@ -35,6 +35,9 @@ export interface Table {
   orderId?: string;
   position: { x: number; y: number };
   shape: 'square' | 'round' | 'rectangle';
+  mergedWith?: string[];
+  isMerged?: boolean;
+  parentTableId?: string;
 }
 
 export interface Order {
