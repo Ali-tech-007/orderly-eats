@@ -14,6 +14,69 @@ export type Database = {
   }
   public: {
     Tables: {
+      orders: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          discount: number | null
+          discount_type: string | null
+          id: string
+          is_synced: boolean
+          items: Json
+          notes: string | null
+          order_number: string
+          payment_method: string | null
+          sent_to_kitchen_at: string | null
+          status: string
+          subtotal: number
+          table_id: string | null
+          tax: number | null
+          total: number
+          updated_at: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          discount?: number | null
+          discount_type?: string | null
+          id?: string
+          is_synced?: boolean
+          items?: Json
+          notes?: string | null
+          order_number: string
+          payment_method?: string | null
+          sent_to_kitchen_at?: string | null
+          status?: string
+          subtotal?: number
+          table_id?: string | null
+          tax?: number | null
+          total?: number
+          updated_at?: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          discount?: number | null
+          discount_type?: string | null
+          id?: string
+          is_synced?: boolean
+          items?: Json
+          notes?: string | null
+          order_number?: string
+          payment_method?: string | null
+          sent_to_kitchen_at?: string | null
+          status?: string
+          subtotal?: number
+          table_id?: string | null
+          tax?: number | null
+          total?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       pos_settings: {
         Row: {
           id: string
@@ -63,6 +126,36 @@ export type Database = {
           full_name?: string
           id?: string
           pin_code?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      staff_management: {
+        Row: {
+          created_at: string
+          hired_at: string | null
+          id: string
+          is_active: boolean
+          notes: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          hired_at?: string | null
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          hired_at?: string | null
+          id?: string
+          is_active?: boolean
+          notes?: string | null
           updated_at?: string
           user_id?: string
         }
