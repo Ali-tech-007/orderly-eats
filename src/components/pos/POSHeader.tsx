@@ -1,7 +1,9 @@
-import { Clock, User, ShoppingCart, LayoutGrid, UtensilsCrossed, LogOut, Settings, ChevronDown } from "lucide-react";
+import { Clock, User, ShoppingCart, LayoutGrid, UtensilsCrossed, LogOut, Settings, ChevronDown, ChefHat, ShieldCheck } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
+import { OfflineIndicator } from "./OfflineIndicator";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,6 +21,9 @@ interface POSHeaderProps {
   onViewModeChange: (mode: ViewMode) => void;
   selectedTableName?: string;
   onOpenSettings?: () => void;
+  isOnline?: boolean;
+  pendingOrdersCount?: number;
+  onSyncOrders?: () => void;
 }
 
 const roleColors: Record<string, string> = {
@@ -35,7 +40,11 @@ export function POSHeader({
   onViewModeChange,
   selectedTableName,
   onOpenSettings,
+  isOnline = true,
+  pendingOrdersCount = 0,
+  onSyncOrders,
 }: POSHeaderProps) {
+  const navigate = useNavigate();
   const { profile, role, signOut, user } = useAuth();
   const [time, setTime] = useState(new Date());
 
@@ -94,6 +103,13 @@ export function POSHeader({
       </div>
 
       <div className="flex items-center gap-2 sm:gap-4">
+        {/* Offline Indicator */}
+        <OfflineIndicator
+          isOnline={isOnline}
+          pendingOrdersCount={pendingOrdersCount}
+          onSync={onSyncOrders}
+        />
+
         <div className="hidden md:flex items-center gap-2 text-muted-foreground">
           <Clock className="w-4 h-4" />
           <span className="text-sm font-medium">
@@ -118,6 +134,16 @@ export function POSHeader({
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuItem onClick={() => navigate("/kitchen")} className="cursor-pointer">
+              <ChefHat className="w-4 h-4 mr-2" />
+              Kitchen Display
+            </DropdownMenuItem>
+            {role === "admin" && (
+              <DropdownMenuItem onClick={() => navigate("/admin")} className="cursor-pointer">
+                <ShieldCheck className="w-4 h-4 mr-2" />
+                Admin Dashboard
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem onClick={onOpenSettings} className="cursor-pointer">
               <Settings className="w-4 h-4 mr-2" />
               Settings

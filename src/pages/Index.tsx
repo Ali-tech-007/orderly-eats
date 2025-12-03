@@ -21,6 +21,7 @@ import { SettingsDialog } from "@/components/pos/SettingsDialog";
 import { modifierPresets } from "@/data/tableData";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePOSSettings } from "@/hooks/usePOSSettings";
+import { useOrders } from "@/hooks/useOrders";
 
 type ViewMode = 'menu' | 'tables';
 
@@ -28,6 +29,13 @@ const Index = () => {
   const navigate = useNavigate();
   const { user, isLoading: authLoading } = useAuth();
   const { taxRates, isLoading: settingsLoading } = usePOSSettings();
+  const { 
+    saveOrder, 
+    sendToKitchen, 
+    isOnline, 
+    getOfflineOrdersCount, 
+    syncOfflineOrders 
+  } = useOrders();
 
   // View & Navigation State
   const [viewMode, setViewMode] = useState<ViewMode>('menu');
@@ -205,12 +213,37 @@ const Index = () => {
     setShowSplitBillDialog(true);
   };
 
-  const handleSendToKitchen = () => {
-    toast.success("Order sent to kitchen!", {
-      duration: 2000,
-      position: "bottom-center",
-      icon: "🍳",
-    });
+  const handleSendToKitchen = async () => {
+    if (orderItems.length === 0) return;
+    
+    try {
+      const orderId = await saveOrder(
+        orderItems,
+        selectedTable || undefined,
+        discount?.amount,
+        discount?.type
+      );
+      
+      if (orderId) {
+        await sendToKitchen(orderId);
+      }
+      
+      toast.success("Order sent to kitchen!", {
+        duration: 2000,
+        position: "bottom-center",
+        icon: "🍳",
+      });
+      
+      // Clear the current order after sending
+      setOrderItems([]);
+      setDiscount(undefined);
+      setOrderHistory([]);
+    } catch (error) {
+      toast.error("Failed to send order to kitchen", {
+        duration: 2000,
+        position: "bottom-center",
+      });
+    }
   };
 
   const handleSplitBill = () => {
@@ -352,6 +385,9 @@ const Index = () => {
           onViewModeChange={setViewMode}
           selectedTableName={selectedTableName}
           onOpenSettings={() => setShowSettingsDialog(true)}
+          isOnline={isOnline}
+          pendingOrdersCount={getOfflineOrdersCount()}
+          onSyncOrders={syncOfflineOrders}
         />
 
         <div className="flex flex-1 overflow-hidden">
