@@ -39,8 +39,13 @@ export function PaymentDialog({
   const [selectedTipPercent, setSelectedTipPercent] = useState<number | null>(null);
   const [customTip, setCustomTip] = useState("");
   const [cashTendered, setCashTendered] = useState("");
-  const [cardLastFour, setCardLastFour] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
+  
+  // Card payment state
+  const [cardNumber, setCardNumber] = useState("");
+  const [cardExpiry, setCardExpiry] = useState("");
+  const [cardCVV, setCardCVV] = useState("");
+  const [cardName, setCardName] = useState("");
 
   // Calculate tax based on payment method using passed-in rates
   const taxRate = paymentMethod ? taxRates[paymentMethod] : taxRates.cash;
@@ -61,14 +66,36 @@ export function PaymentDialog({
     return tendered > grandTotal ? tendered - grandTotal : 0;
   }, [cashTendered, grandTotal]);
 
+  // Format card number with spaces
+  const formatCardNumber = (value: string) => {
+    const cleaned = value.replace(/\D/g, "").slice(0, 16);
+    const groups = cleaned.match(/.{1,4}/g);
+    return groups ? groups.join(" ") : cleaned;
+  };
+
+  // Format expiry date
+  const formatExpiry = (value: string) => {
+    const cleaned = value.replace(/\D/g, "").slice(0, 4);
+    if (cleaned.length >= 2) {
+      return cleaned.slice(0, 2) + "/" + cleaned.slice(2);
+    }
+    return cleaned;
+  };
+
+  const cardLastFour = cardNumber.replace(/\s/g, "").slice(-4);
+  const isCardValid = cardNumber.replace(/\s/g, "").length >= 13 && 
+                      cardExpiry.length === 5 && 
+                      cardCVV.length >= 3 &&
+                      cardName.length >= 2;
+
   const canComplete = useMemo(() => {
     if (!paymentMethod) return false;
     if (paymentMethod === "cash") {
       const tendered = parseFloat(cashTendered) || 0;
       return tendered >= grandTotal;
     }
-    return cardLastFour.length === 4;
-  }, [paymentMethod, cashTendered, grandTotal, cardLastFour]);
+    return isCardValid;
+  }, [paymentMethod, cashTendered, grandTotal, isCardValid]);
 
   const handleSelectTip = (percentage: number) => {
     setSelectedTipPercent(percentage);
@@ -270,19 +297,70 @@ export function PaymentDialog({
 
           {/* Card Input */}
           {paymentMethod === "card" && (
-            <div className="space-y-3 animate-slide-up">
-              <label className="text-sm font-medium text-muted-foreground">Card Last 4 Digits</label>
-              <Input
-                type="text"
-                placeholder="Enter last 4 digits"
-                maxLength={4}
-                value={cardLastFour}
-                onChange={(e) => setCardLastFour(e.target.value.replace(/\D/g, ""))}
-                className="text-lg h-12 tracking-widest text-center"
-              />
-              <p className="text-xs text-muted-foreground text-center">
-                Process payment on external terminal, then enter last 4 digits for records
-              </p>
+            <div className="space-y-4 animate-slide-up">
+              {/* Card Number */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-muted-foreground">Card Number</label>
+                <div className="relative">
+                  <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                  <Input
+                    type="text"
+                    placeholder="1234 5678 9012 3456"
+                    value={formatCardNumber(cardNumber)}
+                    onChange={(e) => setCardNumber(e.target.value.replace(/\D/g, ""))}
+                    className="pl-10 text-lg h-12 tracking-wider font-mono"
+                  />
+                </div>
+              </div>
+
+              {/* Cardholder Name */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-muted-foreground">Cardholder Name</label>
+                <Input
+                  type="text"
+                  placeholder="John Smith"
+                  value={cardName}
+                  onChange={(e) => setCardName(e.target.value)}
+                  className="h-12 uppercase"
+                />
+              </div>
+
+              {/* Expiry and CVV */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-muted-foreground">Expiry Date</label>
+                  <Input
+                    type="text"
+                    placeholder="MM/YY"
+                    value={formatExpiry(cardExpiry)}
+                    onChange={(e) => setCardExpiry(e.target.value.replace(/\D/g, ""))}
+                    className="h-12 text-center tracking-wider font-mono"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-muted-foreground">CVV</label>
+                  <Input
+                    type="password"
+                    placeholder="•••"
+                    maxLength={4}
+                    value={cardCVV}
+                    onChange={(e) => setCardCVV(e.target.value.replace(/\D/g, ""))}
+                    className="h-12 text-center tracking-wider"
+                  />
+                </div>
+              </div>
+
+              {/* Card validation status */}
+              <div className={cn(
+                "p-3 rounded-xl text-center text-sm",
+                isCardValid 
+                  ? "bg-success/10 border border-success/20 text-success" 
+                  : "bg-secondary text-muted-foreground"
+              )}>
+                {isCardValid 
+                  ? "✓ Card details valid - Ready to process" 
+                  : "Enter card details to continue"}
+              </div>
             </div>
           )}
         </div>
